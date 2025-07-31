@@ -40,4 +40,4 @@ const motivationalMessages = [
 ];
 
 const randomMessage = motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)];
-console.log(chalk.rainbow(randomMessage));
+console.log(chalk.cyan(randomMessage));
