@@ -5,7 +5,7 @@ const { spawnSync } = require('child_process');
 const figlet = require('figlet');
 const gradient = require('gradient-string');
 
-// Enhanced header with ASCII art
+// Encabezado
 console.log('\n' + gradient.pastel(figlet.textSync('PRE-COMMIT', {
   font: 'Small',
   horizontalLayout: 'fitted'
@@ -26,9 +26,10 @@ const summaryTable = [];
 let totalStart = process.hrtime();
 
 for (const validation of validations) {
+  // Spinner animado tipo box (cuadrito girando)
   const spinner = ora({
-    text: chalk.yellow(`Running ${validation.name}...`),
-    spinner: 'arc',
+    text: chalk.yellow(`Checking ${validation.name}...`),
+    spinner: 'boxBounce', // Puedes probar con 'arc', 'boxBounce', 'dots', etc.
     color: 'cyan',
     hideCursor: false
   }).start();
@@ -42,14 +43,14 @@ for (const validation of validations) {
   const elapsedSec = (elapsed[0] + elapsed[1] / 1e9).toFixed(2);
 
   if (result.status === 0) {
-    spinner.succeed(`${validation.name} passed (${elapsedSec}s)`);
+    spinner.succeed(`${chalk.green('✔')} ${chalk.bold(validation.name)} passed ${chalk.gray(`(${elapsedSec}s)`)} `);
     summaryTable.push([
       chalk.green('✔'),
       chalk.bold(validation.name),
       chalk.gray(`${elapsedSec}s`)
     ]);
   } else {
-    spinner.fail(`${validation.name} failed (${elapsedSec}s)`);
+    spinner.fail(`${chalk.red('✖')} ${chalk.bold(validation.name)} failed ${chalk.gray(`(${elapsedSec}s)`)} `);
     summaryTable.push([
       chalk.red('✖'),
       chalk.bold(validation.name),
