@@ -5,7 +5,7 @@ const { spawnSync } = require('child_process');
 const figlet = require('figlet');
 const gradient = require('gradient-string');
 
-// Encabezado
+// Encabezado bonito con ASCII art
 console.log('\n' + gradient.pastel(figlet.textSync('PRE-COMMIT', {
   font: 'Small',
   horizontalLayout: 'fitted'
@@ -26,10 +26,10 @@ const summaryTable = [];
 let totalStart = process.hrtime();
 
 for (const validation of validations) {
-  // Spinner animado tipo box (cuadrito girando)
+  // Spinner animado tipo boxBounce (cuadrito girando)
   const spinner = ora({
-    text: chalk.yellow(`Checking ${validation.name}...`),
-    spinner: 'boxBounce', // Puedes probar con 'arc', 'boxBounce', 'dots', etc.
+    text: chalk.yellow(`▢ ${validation.name} (running...)`),
+    spinner: 'boxBounce',
     color: 'cyan',
     hideCursor: false
   }).start();
