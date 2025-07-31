@@ -5,17 +5,28 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { setupSwagger } from './config/swagger/swagger.config';
 import { DataSource } from 'typeorm';
-import * as figlet from 'figlet';
+import figlet from 'figlet';
 import chalk from 'chalk';
 import ora from 'ora';
 
 async function bootstrap(): Promise<void> {
   console.clear();
-  console.log(
-    chalk.blue(
-      (figlet as any).textSync('API Base Project', { horizontalLayout: 'full' }),
-    ),
-  );
+  try {
+    // Safe approach - check if figlet has textSync method
+    if (figlet && typeof figlet === 'object' && 'textSync' in figlet) {
+      const titleText = String(
+        (
+          figlet as { textSync: (text: string, options?: any) => string }
+        ).textSync('API Base Project', { horizontalLayout: 'full' }),
+      );
+      console.log(chalk.blue(titleText));
+    } else {
+      console.log(chalk.blue('API Base Project'));
+    }
+  } catch (error) {
+    console.error(chalk.red('Error generating ASCII art:'), error);
+    console.log(chalk.blue('API Base Project'));
+  }
   console.log(chalk.yellow('🚀 Starting NestJS Application...\n'));
 
   const startSpinner = ora('Initializing application...').start();
@@ -253,7 +264,13 @@ async function bootstrap(): Promise<void> {
       }
     } catch (error: unknown) {
       logger.error('❌ Database Status: CONNECTION ERROR');
-      logger.error(`❗ Error: ${(error as Error).message}`);
+      if (error instanceof Error) {
+        logger.error(`❗ Error: ${error.message}`);
+      } else {
+        logger.error(
+          '❗ Unknown error occurred while connecting to the database.',
+        );
+      }
     }
 
     logger.log(`\n${chalk.bold.cyan('='.repeat(60))}`);

@@ -2,11 +2,25 @@ const chalk = require('chalk').default;
 const ora = require('ora').default;
 const boxen = require('boxen').default;
 const { spawnSync } = require('child_process');
+const figlet = require('figlet');
+const gradient = require('gradient-string');
 
-// Compact ASCII art
-console.log(chalk.cyan('🔍 Pre-commit checks...'));
+// Enhanced header with ASCII art
+console.log('\n' + gradient.pastel(figlet.textSync('PRE-COMMIT', {
+  font: 'Small',
+  horizontalLayout: 'fitted'
+})));
+console.log(chalk.cyan('🔍 Running comprehensive checks...\n'));
 
-const spinner = ora({ text: 'Running validations...', spinner: 'dots'}).start();
+// Force flush stdout to ensure immediate display
+process.stdout.write('');
+
+const spinner = ora({ 
+  text: chalk.yellow('Preparing validations...'), 
+  spinner: 'arc',
+  color: 'cyan',
+  hideCursor: false
+}).start();
 
 // Enhanced validations
 const validations = [
