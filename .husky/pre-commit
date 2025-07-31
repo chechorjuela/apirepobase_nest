@@ -1,0 +1,2 @@
+# Run the animated pre-commit script
+node scripts/pre-commit-animated.js

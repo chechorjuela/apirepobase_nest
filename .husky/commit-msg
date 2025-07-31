@@ -1,0 +1,2 @@
+# Run the animated commit message validation
+node scripts/commit-msg-animated.js "$1"

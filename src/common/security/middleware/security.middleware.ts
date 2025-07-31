@@ -1,13 +1,24 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable no-useless-escape */
 import {
-  HttpException,
-  HttpStatus,
   Injectable,
   Logger,
   NestMiddleware,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { NextFunction, Request, Response } from 'express';
 import { SecurityService } from '../services/security.service';
 import { ConfigService } from '@nestjs/config';
+import {
+  SqlInjectionException,
+  XssException,
+  CommandInjectionException,
+  PathTraversalException,
+  RateLimitException,
+  SuspiciousActivityException,
+} from '../exceptions';
 
 @Injectable()
 export class SecurityMiddleware implements NestMiddleware {
@@ -71,25 +82,27 @@ export class SecurityMiddleware implements NestMiddleware {
     );
 
     if (!this.isValidHost(host)) {
-      throw new HttpException('Invalid host header', HttpStatus.BAD_REQUEST);
+      throw SuspiciousActivityException.createForInvalidHost(host);
     }
 
     if (!this.checkRateLimit(clientIp)) {
-      throw new HttpException(
-        'Too many requests',
-        HttpStatus.TOO_MANY_REQUESTS,
+      const windowMs = 15 * 60 * 1000;
+      const maxRequests = 100;
+      const retryAfter = Math.ceil(windowMs / 1000);
+      throw RateLimitException.create(
+        clientIp,
+        maxRequests,
+        windowMs,
+        retryAfter,
       );
     }
 
     if (this.isSuspiciousUserAgent(userAgent)) {
-      throw new HttpException(
-        'Suspicious user agent detected',
-        HttpStatus.FORBIDDEN,
-      );
+      throw SuspiciousActivityException.createForUserAgent(userAgent);
     }
 
     if (this.isBlacklistedIp(clientIp)) {
-      throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
+      throw SuspiciousActivityException.createForBlacklistedIP(clientIp);
     }
 
     this.validateSecurityHeaders(req);
@@ -192,30 +205,51 @@ export class SecurityMiddleware implements NestMiddleware {
   private validateString(value: string, context: string): void {
     // Check string length
     if (value.length > 10000) {
-      throw new HttpException(
+      throw new SuspiciousActivityException(
         `Input too long in ${context}`,
-        HttpStatus.BAD_REQUEST,
+        `Length: ${value.length} characters`,
       );
     }
 
-    if (this.suspiciousPatterns.some((pattern) => pattern.test(value))) {
-      throw new HttpException(
-        `Suspicious content detected in ${context}`,
-        HttpStatus.BAD_REQUEST,
-      );
+    // Check for SQL injection patterns
+    const sqlPatterns = [
+      /('|(\\x27)|(\\x2D\\x2D)|(\u0027))/gi,
+      /(union|select|insert|delete|update|drop|create|alter|exec|execute)/gi,
+    ];
+
+    if (sqlPatterns.some((pattern) => pattern.test(value))) {
+      throw SqlInjectionException.create(context, value);
     }
 
+    // Check for XSS patterns
+    const xssPatterns = [
+      /<script[^>]*>.*?<\/script>/gi,
+      /<iframe[^>]*>.*?<\/iframe>/gi,
+      /javascript:/gi,
+      /on\w+\s*=/gi,
+    ];
+
+    if (xssPatterns.some((pattern) => pattern.test(value))) {
+      throw XssException.create(context, value);
+    }
+
+    // Check for command injection
     if (this.securityService.containsOSCommands(value)) {
-      throw new HttpException(
-        `OS command detected in ${context}`,
-        HttpStatus.BAD_REQUEST,
-      );
+      throw CommandInjectionException.create(context, value);
     }
 
+    // Check for path traversal
     if (!this.securityService.isValidPath(value)) {
-      throw new HttpException(
-        `Directory traversal attempt detected in ${context}`,
-        HttpStatus.BAD_REQUEST,
+      throw PathTraversalException.create(context, value);
+    }
+
+    // Check for other suspicious patterns
+    const otherSuspiciousPatterns = [/[;&|`$<>(){}[\]\'"]/g];
+
+    if (otherSuspiciousPatterns.some((pattern) => pattern.test(value))) {
+      throw new SuspiciousActivityException(
+        `Suspicious characters detected in ${context}`,
+        value.substring(0, 50),
       );
     }
   }
@@ -287,7 +321,9 @@ export class SecurityMiddleware implements NestMiddleware {
 
     // Validate Origin header
     if (origin && !this.isValidOrigin(origin)) {
-      throw new HttpException('Invalid origin header', HttpStatus.FORBIDDEN);
+      throw SuspiciousActivityException.createForInvalidHost(
+        `Origin: ${origin}`,
+      );
     }
 
     const allHeaders = Object.entries(req.headers);
@@ -296,10 +332,7 @@ export class SecurityMiddleware implements NestMiddleware {
         typeof value === 'string' &&
         (value.includes('\n') || value.includes('\r'))
       ) {
-        throw new HttpException(
-          'Header injection detected',
-          HttpStatus.BAD_REQUEST,
-        );
+        throw SuspiciousActivityException.createForHeaderInjection(value);
       }
     }
   }

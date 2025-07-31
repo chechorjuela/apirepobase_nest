@@ -1,0 +1,2 @@
+# Run the animated post-commit celebration
+node scripts/post-commit-animated.js
