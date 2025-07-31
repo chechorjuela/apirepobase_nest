@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # Development service
+  api-dev:
+    build:
+      context: .
+      target: development
+    container_name: api-base-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - SECURITY_ENABLED=false
+    networks:
+      - api-network
+    restart: unless-stopped
+    profiles:
+      - dev
+
+  # Production service
+  api-prod:
+    build:
+      context: .
+      target: production
+    container_name: api-base-prod
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - api-network
+    restart: unless-stopped
+    profiles:
+      - prod
+
+  # Database service (PostgreSQL)
+  postgres:
+    image: postgres:15-alpine
+    container_name: api-base-postgres
+    environment:
+      POSTGRES_DB: api_base_db
+      POSTGRES_USER: api_user
+      POSTGRES_PASSWORD: api_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - api-network
+    restart: unless-stopped
+    profiles:
+      - dev
+      - prod
+
+  # Redis service (for caching/sessions)
+  redis:
+    image: redis:7-alpine
+    container_name: api-base-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - api-network
+    restart: unless-stopped
+    profiles:
+      - dev
+      - prod
+
+networks:
+  api-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
