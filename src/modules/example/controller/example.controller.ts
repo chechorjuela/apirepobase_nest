@@ -9,14 +9,21 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  Logger,
+  ParseUUIDPipe,
+  ValidationPipe,
+  UsePipes,
+  UseGuards,
 } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { Public } from '../../../common/security/guards';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { InjectMapper } from '@automapper/nestjs';
 import { Mapper } from '@automapper/core';
 import {
   CreateExampleRequestDto,
-  ExampleResponsetDto,
+  ExampleResponseDto,
   UpdateExampleRequestDto,
 } from '../dto';
 import {
@@ -31,7 +38,12 @@ import { ExampleEntity } from '../entities/example.entity';
 
 @ApiTags('Examples')
 @Controller('examples')
+@Public()
+@UseGuards(ThrottlerGuard)
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class ExampleController {
+  private readonly logger = new Logger(ExampleController.name);
+
   constructor(
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
@@ -48,12 +60,16 @@ export class ExampleController {
   })
   async create(
     @Body() createExampleDto: CreateExampleRequestDto,
-  ): Promise<ExampleResponsetDto> {
+  ): Promise<ExampleResponseDto> {
+    this.logger.warn(
+      `🔓 PUBLIC API USAGE: Creating example with name: ${createExampleDto.name}`,
+    );
+
     const result = await this.commandBus.execute(
       new CreateExampleCommand(createExampleDto),
     );
 
-    return this.mapper.map(result, ExampleEntity, ExampleResponsetDto);
+    return this.mapper.map(result, ExampleEntity, ExampleResponseDto);
   }
 
   @Get()
@@ -65,14 +81,18 @@ export class ExampleController {
   })
   async findAll(
     @Query() paginationDto: PaginationRequestDto,
-  ): Promise<ExampleResponsetDto[]> {
+  ): Promise<ExampleResponseDto[]> {
+    this.logger.log(
+      `🔓 PUBLIC API USAGE: Retrieving examples - Page: ${paginationDto.page || 1}, Limit: ${paginationDto.limit || 10}`,
+    );
+
     const result = await this.queryBus.execute(
       new GetAllExampleQuery(paginationDto),
     );
 
     return Array.isArray(result)
       ? result.map((item) =>
-          this.mapper.map(item, ExampleEntity, ExampleResponsetDto),
+          this.mapper.map(item, ExampleEntity, ExampleResponseDto),
         )
       : result;
   }
@@ -86,12 +106,12 @@ export class ExampleController {
     type: ApiResponseDto,
   })
   @ApiResponse({ status: 404, description: 'ExampleEntity not found' })
-  async findOne(@Param('id') id: string): Promise<ExampleResponsetDto> {
-    const result = await this.queryBus.execute(
-      new GetByIdExampleQuery(parseInt(id)),
-    );
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ExampleResponseDto> {
+    const result = await this.queryBus.execute(new GetByIdExampleQuery(id));
 
-    return this.mapper.map(result, ExampleEntity, ExampleResponsetDto);
+    return this.mapper.map(result, ExampleEntity, ExampleResponseDto);
   }
 
   @Put(':id')
@@ -104,13 +124,13 @@ export class ExampleController {
   })
   @ApiResponse({ status: 404, description: 'ExampleEntity not found' })
   async update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateExampleDto: UpdateExampleRequestDto,
-  ): Promise<ExampleResponsetDto> {
+  ): Promise<ExampleResponseDto> {
     const command = { ...updateExampleDto, id };
     const result = await this.commandBus.execute(command);
 
-    return this.mapper.map(result, ExampleEntity, ExampleResponsetDto);
+    return this.mapper.map(result, ExampleEntity, ExampleResponseDto);
   }
 
   @Delete(':id')
@@ -123,7 +143,7 @@ export class ExampleController {
     type: ApiResponseDto,
   })
   @ApiResponse({ status: 404, description: 'ExampleEntity not found' })
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.commandBus.execute(new DeleteExampleCommand(parseInt(id)));
+  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    await this.commandBus.execute(new DeleteExampleCommand(id));
   }
 }

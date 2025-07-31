@@ -5,13 +5,13 @@ export * from './interceptors';
 export * from './filters';
 
 // Guards
-export * from './guards';
+export * from './security/guards';
 
 // Pipes
 export * from './pipes';
 
 // Middlewares
-export * from './middlewares';
+export * from './security/middleware';
 
 // DTOs
 export * from './dto/response/api-response.dto';

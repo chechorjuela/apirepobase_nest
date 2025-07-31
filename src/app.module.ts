@@ -3,6 +3,12 @@ import { APP_INTERCEPTOR, APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { ThrottlerModule } from '@nestjs/throttler';
+import jwtConfig, {
+  refreshTokenConfig,
+  jwtSecurityConfig,
+} from './config/auth/jwt.config';
+import databaseConfig from './config/database/database.config';
 import { SecurityModule } from './common/security/security.module';
 import {
   ResponseInterceptor,
@@ -11,12 +17,11 @@ import {
   CacheInterceptor,
 } from './common/interceptors';
 import { HttpExceptionFilter, ValidationFilter } from './common/filters';
-import { AuthGuard } from './common/guards';
+import { AuthGuard } from './common/security/guards';
 import { CustomValidationPipe } from './common/pipes';
-import { RequestLoggingMiddleware } from './common/middlewares';
+import { RequestLoggingMiddleware } from './common/security/middleware';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ExampleEntity } from './modules/example/entities/example.entity';
 import { ExampleModule } from './modules/example/example.module';
 
 @Module({
@@ -24,34 +29,48 @@ import { ExampleModule } from './modules/example/example.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
+      load: [databaseConfig, jwtConfig, refreshTokenConfig, jwtSecurityConfig],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'sqlite',
-        database: configService.get<string>('DATABASE_PATH', 'database.sqlite'),
-        entities: [ExampleEntity],
-        synchronize: configService.get<boolean>('DATABASE_SYNC', true),
-        logging: configService.get<boolean>('DATABASE_LOGGING', false),
-        retryAttempts: configService.get<number>('database.retryAttempts', 3),
-        retryDelay: configService.get<number>('database.retryDelay', 3000),
-      }),
+      useFactory: (configService: ConfigService) => {
+        const config = configService.get('database');
+        if (!config) {
+          throw new Error('Database configuration not found');
+        }
+        return config;
+      },
       inject: [ConfigService],
     }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>(
-          'security.jwt.secret',
-          'your-secret-key',
-        ),
-        signOptions: {
-          expiresIn: configService.get<string>('security.jwt.expiresIn', '1h'),
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const config = configService.get('jwt');
+        if (!config) {
+          throw new Error('JWT configuration not found');
+        }
+        return config;
+      },
       inject: [ConfigService],
       global: true,
     }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000, // 1 second
+        limit: 3, // 3 requests per second
+      },
+      {
+        name: 'medium',
+        ttl: 60000, // 1 minute
+        limit: 20, // 20 requests per minute
+      },
+      {
+        name: 'long',
+        ttl: 900000, // 15 minutes
+        limit: 100, // 100 requests per 15 minutes
+      },
+    ]),
     SecurityModule,
     ExampleModule,
   ],

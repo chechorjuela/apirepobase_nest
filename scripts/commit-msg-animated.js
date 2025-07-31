@@ -2,55 +2,25 @@ const fs = require('fs');
 const chalk = require('chalk').default;
 const ora = require('ora').default;
 const boxen = require('boxen').default;
-const figlet = require('figlet');
-const gradient = require('gradient-string');
+
+// Compact message
+console.log(chalk.cyan('📝 Commit message validation...'));
 
 const commitMsgFile = process.argv[2];
 const commitMsg = fs.readFileSync(commitMsgFile, 'utf8').trim();
 
-console.log(gradient.mind(figlet.textSync('Commit Check', { horizontalLayout: 'full' })));
-
-const spinner = ora({ text: 'Validating commit message...', spinner: 'bouncingBar' }).start();
+const spinner = ora({ text: 'Checking format...', spinner: 'dots' }).start();
 
 // Conventional commit pattern
 const conventionalCommitPattern = /^(feat|fix|docs|style|refactor|perf|test|chore|build|ci|revert)(\(.+\))?: .{1,50}/;
 
 // Check if commit message follows conventional commits
 if (!conventionalCommitPattern.test(commitMsg)) {
-  spinner.fail('Invalid commit message format!');
-  
-  console.log(gradient.retro(figlet.textSync('INVALID', { horizontalLayout: 'full' })));
-  
-  console.log(boxen(chalk.red(`
-${chalk.bold('❌ Invalid commit message format!')}
-
-${chalk.yellow('Expected format:')}
-type(scope?): description
-
-${chalk.yellow('Valid types:')}
-• feat: A new feature
-• fix: A bug fix
-• docs: Documentation only changes
-• style: Changes that do not affect the meaning of the code
-• refactor: A code change that neither fixes a bug nor adds a feature
-• perf: A code change that improves performance
-• test: Adding missing tests or correcting existing tests
-• chore: Changes to the build process or auxiliary tools
-• build: Changes that affect the build system or external dependencies
-• ci: Changes to our CI configuration files and scripts
-• revert: Reverts a previous commit
-
-${chalk.yellow('Examples:')}
-feat: add user authentication
-fix(api): resolve login endpoint error
-docs: update README with installation steps
-  `), {
+  spinner.fail('Commit message format invalid!');
+  console.log(boxen(chalk.red.bold('❌ Use Conventional Commits format')), {
     padding: 1,
-    borderStyle: 'round',
-    borderColor: 'red',
-    margin: 1
-  }));
-  
+    borderStyle: 'round'
+  });
   process.exit(1);
 }
 
@@ -59,22 +29,22 @@ const lines = commitMsg.split('\n');
 const firstLine = lines[0];
 
 if (firstLine.length > 72) {
-  spinner.warn('Commit message first line is longer than 72 characters');
-  console.log(chalk.yellow('⚠️  Consider shortening your commit message for better readability'));
+  spinner.warn('Commit message first line is too long');
+  console.log(chalk.yellow('⚠️ Consider shortening the first line'));
 }
 
 if (firstLine.endsWith('.')) {
-  spinner.warn('Commit message ends with a period');
-  console.log(chalk.yellow('⚠️  Remove the trailing period from your commit message'));
+  spinner.warn('First line ends with a period');
+  console.log(chalk.yellow('⚠️ Remove trailing period'));
 }
 
-spinner.succeed('Commit message validation passed!');
+if (!commitMsg.includes('JIRA-')) {
+    spinner.warn('No JIRA ticket found!');
+    console.log(chalk.yellow('⚠️ Include JIRA ticket for tracking'));
+}
 
-console.log(boxen(gradient.summer(figlet.textSync('VALID', { horizontalLayout: 'full' })), {
+spinner.succeed('Commit message is valid!');
+console.log(boxen(chalk.green('✅ Good to go!'), {
   padding: 1,
-  borderStyle: 'double',
-  margin: 1,
-  align: 'center'
+  borderStyle: 'round'
 }));
-
-console.log(chalk.green('✅ Great commit message! Keep up the good work!'));

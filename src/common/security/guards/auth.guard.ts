@@ -20,12 +20,6 @@ interface AuthenticatedRequest extends Request {
   user?: JwtPayload;
 }
 
-// Decorator to mark routes as public (skip authentication)
-export const Public = () => Reflect.metadata('isPublic', true);
-
-// Decorator to mark routes as requiring authentication
-export const Protected = () => Reflect.metadata('isProtected', true);
-
 @Injectable()
 export class AuthGuard implements CanActivate {
   private readonly logger = new Logger(AuthGuard.name);

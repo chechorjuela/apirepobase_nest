@@ -32,10 +32,9 @@ export class CustomValidationPipe implements PipeTransform<any, Promise<any>> {
     }
 
     const object = plainToClass(metatype, value);
-    const errors: ValidationError[] = await validate(object, {
+    const errors: ValidationError[] = await validate(object as object, {
       whitelist: true,
       forbidNonWhitelisted: true,
-      transform: true,
       dismissDefaultMessages: false,
       validationError: {
         target: false,

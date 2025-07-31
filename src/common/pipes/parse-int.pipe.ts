@@ -12,12 +12,14 @@ export interface ParseIntPipeOptions {
 }
 
 @Injectable()
-export class CustomParseIntPipe implements PipeTransform<string, number> {
+export class CustomParseIntPipe
+  implements PipeTransform<string, number | undefined>
+{
   private readonly logger = new Logger(CustomParseIntPipe.name);
 
   constructor(private readonly options: ParseIntPipeOptions = {}) {}
 
-  transform(value: string): number {
+  transform(value: string): number | undefined {
     if (
       this.options.optional &&
       (value === undefined || value === null || value === '')

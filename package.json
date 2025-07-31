@@ -55,7 +55,7 @@
     "docker:db": "./scripts/docker-dev.sh db",
     "docker:test": "./scripts/docker-dev.sh test",
     "docker:lint": "./scripts/docker-dev.sh lint",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "dependencies": {
     "@automapper/classes": "^8.8.1",
@@ -84,7 +84,7 @@
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.16.3",
-    "reflect-metadata": "^0.2.2",
+    "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "sqlite3": "^5.1.7",
     "swagger-ui-express": "^5.0.1",

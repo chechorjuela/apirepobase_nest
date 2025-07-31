@@ -59,11 +59,14 @@ export class ExampleRepository
     limit: number;
     totalPages: number;
   }> {
-    const skip = (page - 1) * limit;
+    // Security: Enforce safe limits and page numbers
+    const safeLimit = Math.min(Math.max(limit, 1), 100); // Max 100 items per page
+    const safePage = Math.max(page, 1); // Minimum page 1
+    const skip = (safePage - 1) * safeLimit;
 
     const [data, total] = await this.repository.findAndCount({
       skip,
-      take: limit,
+      take: safeLimit,
       order: {
         createdAt: 'DESC',
       },
@@ -72,9 +75,9 @@ export class ExampleRepository
     return {
       data,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
     };
   }
 
