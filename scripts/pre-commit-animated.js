@@ -5,6 +5,8 @@ const { spawn } = require('child_process');
 const figlet = require('figlet');
 const gradient = require('gradient-string');
 
+const SHOW_ERROR_LOGS = true; // Cambia a false si no quieres ver el log de error
+
 function runCommand(cmd, args) {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, { stdio: 'pipe', shell: true });
@@ -23,31 +25,31 @@ function runCommand(cmd, args) {
   });
 }
 
-(async () => {
-  // Encabezado bonito con ASCII art
-  console.log('\n' + gradient.pastel(figlet.textSync('PRE-COMMIT', {
-    font: 'Small',
-    horizontalLayout: 'fitted'
-  })));
-  console.log(chalk.cyan('🔍 Running comprehensive checks...\n'));
+// Encabezado bonito con ASCII art
+console.log('\n' + gradient.pastel(figlet.textSync('PRE-COMMIT', {
+  font: 'Small',
+  horizontalLayout: 'fitted'
+})));
+console.log(chalk.cyan('🔍 Running comprehensive checks...\n'));
 
-  const validations = [
-    { cmd: 'npx', args: ['lint-staged'], name: 'Code formatting & linting' },
-    { cmd: 'npx', args: ['tsc', '--noEmit'], name: 'TypeScript compilation' },
-    { cmd: 'npm', args: ['run', 'test', '--', '--passWithNoTests', '--watchAll=false'], name: 'Unit tests' },
-    { cmd: 'npm', args: ['audit', '--audit-level=high'], name: 'Security audit' },
-    { cmd: 'docker', args: ['--version'], name: 'Docker availability' },
-    { cmd: 'docker', args: ['compose', '--profile', 'prod', 'build'], name: 'Docker build test' }
-  ];
+const validations = [
+  { cmd: 'npx', args: ['lint-staged'], name: 'Code formatting & linting', spinner: 'boxBounce' },
+  { cmd: 'npx', args: ['tsc', '--noEmit'], name: 'TypeScript compilation', spinner: 'arc' },
+  { cmd: 'npm', args: ['run', 'test', '--', '--passWithNoTests', '--watchAll=false'], name: 'Unit tests', spinner: 'dots' },
+  { cmd: 'npm', args: ['audit', '--audit-level=high'], name: 'Security audit', spinner: 'star' },
+  { cmd: 'docker', args: ['--version'], name: 'Docker availability', spinner: 'boxBounce' },
+  { cmd: 'docker', args: ['compose', '--profile', 'prod', 'build'], name: 'Docker build test', spinner: 'boxBounce' }
+];
 
-  let allPassed = true;
-  const summaryTable = [];
-  const totalStart = process.hrtime();
+let allPassed = true;
+const summaryTable = [];
+const totalStart = process.hrtime();
 
+async function validateSteps() {
   for (const validation of validations) {
     const spinner = ora({
       text: chalk.yellow(`▢ ${validation.name} (running...)`),
-      spinner: 'boxBounce',
+      spinner: validation.spinner || 'boxBounce',
       color: 'cyan',
       hideCursor: false
     }).start();
@@ -77,51 +79,53 @@ function runCommand(cmd, args) {
         chalk.gray(`${elapsedSec}s`)
       ]);
       allPassed = false;
-      if (result.stderr && !result.stderr.includes('npm audit')) {
-        console.log(`\n${chalk.red('Error in ' + validation.name + ':')}`);
-        console.log(chalk.redBright(result.stderr));
+      if (result.stderr && SHOW_ERROR_LOGS) {
+        console.log(boxen(
+          `${chalk.red('Error in ' + validation.name + ':')}\n` +
+          chalk.redBright(result.stderr.trim().split('\n').slice(0, 8).join('\n')) +
+          `\n${chalk.yellow('Tip: Fix the error above and try again.')}`,
+          { padding: 1, borderColor: 'red', borderStyle: 'round', margin: 1 }
+        ));
       }
     }
   }
+}
+
+function renderTable(rows) {
+  const colWidths = [2, 28, 8];
+  let output = chalk.bold.underline('Result') + '  ' +
+    chalk.bold.underline('Validation') + '           ' +
+    chalk.bold.underline('Time') + '\n';
+  for (const row of rows) {
+    output += row[0].padEnd(colWidths[0]) +
+      ' ' + row[1].padEnd(colWidths[1]) +
+      ' ' + row[2].padEnd(colWidths[2]) + '\n';
+  }
+  return output;
+}
+
+(async () => {
+  await validateSteps();
 
   const totalElapsed = process.hrtime(totalStart);
   const totalElapsedSec = (totalElapsed[0] + totalElapsed[1] / 1e9).toFixed(2);
-
-  function renderTable(rows) {
-    const colWidths = [2, 28, 8];
-    let output = chalk.bold.underline('Result') + '  ' +
-      chalk.bold.underline('Validation') + '           ' +
-      chalk.bold.underline('Time') + '\n';
-    for (const row of rows) {
-      output += row[0].padEnd(colWidths[0]) +
-        ' ' + row[1].padEnd(colWidths[1]) +
-        ' ' + row[2].padEnd(colWidths[2]) + '\n';
-    }
-    return output;
-  }
-
   const summary = renderTable(summaryTable);
 
-  if (allPassed) {
-    console.log(boxen(
-      summary + `\n${chalk.green('🚀 Ready to commit!')}\n${chalk.bold('Total time:')} ${chalk.cyan(totalElapsedSec + 's')}`,
-      {
-        padding: 1,
-        borderStyle: 'round',
-        borderColor: 'green',
-        margin: 1
-      }
-    ));
-  } else {
-    console.log(boxen(
-      summary + `\n${chalk.red('❌ Fix issues before committing')}\n${chalk.bold('Total time:')} ${chalk.yellow(totalElapsedSec + 's')}`,
-      {
-        padding: 1,
-        borderStyle: 'round',
-        borderColor: 'red',
-        margin: 1
-      }
-    ));
-    process.exit(1);
-  }
+  const boxColor = allPassed ? 'green' : 'red';
+  const totalTimeColor = allPassed ? chalk.cyan : chalk.yellow;
+
+  console.log(boxen(
+    summary +
+    (allPassed
+      ? `\n${chalk.green('🚀 Ready to commit!')}\n${chalk.bold('Total time:')} ${totalTimeColor(totalElapsedSec + 's')}`
+      : `\n${chalk.red('❌ Fix issues before committing')}\n${chalk.bold('Total time:')} ${totalTimeColor(totalElapsedSec + 's')}`),
+    {
+      padding: 1,
+      borderStyle: 'round',
+      borderColor: boxColor,
+      margin: 1
+    }
+  ));
+
+  if (!allPassed) process.exit(1);
 })();
