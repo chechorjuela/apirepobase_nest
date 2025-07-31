@@ -66,4 +66,64 @@ export abstract class Repository<T extends ObjectLiteral>
     const entity = await this.findById(id);
     return entity !== null;
   }
+
+  // Database command execution methods
+  async executeQuery<R = any>(query: string, parameters?: any[]): Promise<R[]> {
+    const entityManager = this.manager || this.repository.manager;
+    return await entityManager.query(query, parameters);
+  }
+
+  async executeStoredProcedure<R = any>(
+    procedureName: string,
+    parameters?: any[],
+  ): Promise<R[]> {
+    const entityManager = this.manager || this.repository.manager;
+    const paramPlaceholders = parameters
+      ? parameters.map((_, index) => `$${index + 1}`).join(', ')
+      : '';
+    const query = `CALL ${procedureName}(${paramPlaceholders})`;
+    return await entityManager.query(query, parameters);
+  }
+
+  async executeFunction<R = any>(
+    functionName: string,
+    parameters?: any[],
+  ): Promise<R> {
+    const entityManager = this.manager || this.repository.manager;
+    const paramPlaceholders = parameters
+      ? parameters.map((_, index) => `$${index + 1}`).join(', ')
+      : '';
+    const query = `SELECT ${functionName}(${paramPlaceholders}) as result`;
+    const result = await entityManager.query(query, parameters);
+    return result[0]?.result as R;
+  }
+
+  async executeView<R = any>(
+    viewName: string,
+    conditions?: Record<string, any>,
+  ): Promise<R[]> {
+    const entityManager = this.manager || this.repository.manager;
+    let query = `SELECT * FROM ${viewName}`;
+    const parameters: any[] = [];
+
+    if (conditions && Object.keys(conditions).length > 0) {
+      const whereClause = Object.keys(conditions)
+        .map((key, index) => {
+          parameters.push(conditions[key]);
+          return `${key} = $${index + 1}`;
+        })
+        .join(' AND ');
+      query += ` WHERE ${whereClause}`;
+    }
+
+    return await entityManager.query(query, parameters);
+  }
+
+  async executeRawQuery<R = any>(
+    query: string,
+    parameters?: any[],
+  ): Promise<R> {
+    const entityManager = this.manager || this.repository.manager;
+    return await entityManager.query(query, parameters);
+  }
 }

@@ -107,4 +107,46 @@ export class ExampleRepository
     }
     return updatedEntity;
   }
+
+  // Example usage of new database command methods
+
+  // Execute a custom query
+  async getExampleStatistics(): Promise<any[]> {
+    const query = `
+      SELECT 
+        COUNT(*) as total,
+        COUNT(CASE WHEN created_at > NOW() - INTERVAL '7 days' THEN 1 END) as recent
+      FROM example
+    `;
+    return await this.executeQuery(query);
+  }
+
+  // Execute a stored procedure
+  async callExampleProcedure(userId: number, status: string): Promise<any[]> {
+    return await this.executeStoredProcedure('update_example_status', [
+      userId,
+      status,
+    ]);
+  }
+
+  // Execute a database function
+  async calculateExampleScore(exampleId: number): Promise<number> {
+    return await this.executeFunction('calculate_example_score', [exampleId]);
+  }
+
+  // Query a view with conditions
+  async getActiveExamplesView(status?: string): Promise<any[]> {
+    const conditions = status ? { status } : undefined;
+    return await this.executeView('active_examples_view', conditions);
+  }
+
+  // Execute raw query for complex operations
+  async bulkUpdateExamples(ids: number[], newStatus: string): Promise<any> {
+    const query = `
+      UPDATE example 
+      SET status = $1, updated_at = NOW() 
+      WHERE id = ANY($2)
+    `;
+    return await this.executeRawQuery(query, [newStatus, ids]);
+  }
 }

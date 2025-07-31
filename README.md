@@ -1,7 +1,6 @@
-# Base API REST Project
+# 🚀 Base API REST Project
 
-🚀 A production-ready RESTful API built with [NestJS](https://nestjs.com/) featuring comprehensive security, Docker
-support, and configurable environments.
+**A production-ready, enterprise-grade RESTful API built with [NestJS](https://nestjs.com/) featuring advanced security, database management, CQRS architecture, and Docker deployment.**
 
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
@@ -13,6 +12,9 @@ support, and configurable environments.
   <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/TypeORM-262627?style=for-the-badge&logo=typeorm&logoColor=white" alt="TypeORM" />
+  <img src="https://img.shields.io/badge/CQRS-FF6B6B?style=for-the-badge&logo=architecture&logoColor=white" alt="CQRS" />
+  <img src="https://img.shields.io/badge/AutoMapper-4ECDC4?style=for-the-badge&logo=mapping&logoColor=white" alt="AutoMapper" />
 </p>
 
 ---
@@ -48,16 +50,65 @@ support, and configurable environments.
 
 ## 📖 Description
 
-This is a comprehensive starter repository for building secure, scalable server-side applications using NestJS. It
-includes:
+The **Base API REST Project** is a robust, high-performance server-side application starter kit built with [NestJS](https://nestjs.com/). It's crafted to simplify the creation of scalable and secure applications, suited for both small and enterprise-level projects. This template is adaptable for Docker deployment or managing complex environments.
 
-- **Enterprise-grade security** with configurable protection levels
-- **Docker containerization** for easy deployment
-- **Database integration** with TypeORM and PostgreSQL
-- **API documentation** with Swagger/OpenAPI
-- **Comprehensive testing** setup
-- **Development-friendly** security toggles
-- **Production-ready** configurations
+### Project Goals:
+
+- Deliver an easy-to-set-up REST API framework with essential features.
+- Ensure security, scalability, and adaptability.
+- Facilitate rapid development and deployment cycles.
+
+### Key Highlights:
+
+- **Security Focused**: Offers advanced security features like SQL Injection protection, XSS prevention, and CSRF defenses.
+- **Containerized Deployment**: Provides comprehensive Docker support, ensuring seamless deployment and scalability.
+- **Database Ready**: Equipped with TypeORM integration and PostgreSQL support for efficient database management.
+- **Comprehensive API Documentation**: Features auto-generated API documentation using Swagger/OpenAPI.
+- **Thorough Testing Setup**: Includes unit, integration, and E2E tests to maintain high code quality.
+- **Flexible Configuration**: Offers extensive options for configuration, smoothing transitions between development and production environments.
+
+### Use Cases:
+
+- Building secure APIs for web and mobile applications.
+- Rapid prototyping and testing of server-side logic.
+- Deploying scalable microservices in cloud environments.
+
+---
+
+### 🚀 Quick Start
+
+1. **Clone the Repository:**
+
+   ```bash
+   git clone <repository-url>
+   cd base-api-rest-project
+   ```
+
+2. **Install Dependencies:**
+
+   ```bash
+   npm install
+   ```
+
+3. **Environment Configuration:**
+   Create a `.env` file based on the example file and customize as needed.
+
+4. **Run the Application:**
+   - **Development Mode:**
+
+     ```bash
+     npm run start:dev
+     ```
+
+   - **Production Mode:**
+     ```bash
+     npm run build
+     npm run start:prod
+     ```
+
+5. **Access the Application:**
+   - Open your browser to `http://localhost:3000` to access API endpoints.
+   - Explore API documentation at `http://localhost:3000/api`.
 
 ---
 
@@ -480,9 +531,9 @@ docker-compose -f docker-compose.prod.yml up -d
 ### Environment Variables
 
 - **`SECURITY_ENABLED`**:
-    - `true`: Enable all security validations
-    - `false`: Disable security validations (dev only)
-    - **Default**: `false` in development, `true` in production
+  - `true`: Enable all security validations
+  - `false`: Disable security validations (dev only)
+  - **Default**: `false` in development, `true` in production
 
 ### Security Features
 
