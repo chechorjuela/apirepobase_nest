@@ -12,17 +12,6 @@ console.log('\n' + gradient.pastel(figlet.textSync('PRE-COMMIT', {
 })));
 console.log(chalk.cyan('🔍 Running comprehensive checks...\n'));
 
-// Force flush stdout to ensure immediate display
-process.stdout.write('');
-
-const spinner = ora({ 
-  text: chalk.yellow('Preparing validations...'), 
-  spinner: 'arc',
-  color: 'cyan',
-  hideCursor: false
-}).start();
-
-// Enhanced validations
 const validations = [
   { cmd: 'npx', args: ['lint-staged'], name: 'Code formatting & linting' },
   { cmd: 'npx', args: ['tsc', '--noEmit'], name: 'TypeScript compilation' },
@@ -33,42 +22,84 @@ const validations = [
 ];
 
 let allPassed = true;
-const results = [];
+const summaryTable = [];
+let totalStart = process.hrtime();
 
 for (const validation of validations) {
-  spinner.text = `Running ${validation.name}...`;
-  const result = spawnSync(validation.cmd, validation.args, { 
-    stdio: 'pipe', 
-    encoding: 'utf8' 
+  const spinner = ora({
+    text: chalk.yellow(`Running ${validation.name}...`),
+    spinner: 'arc',
+    color: 'cyan',
+    hideCursor: false
+  }).start();
+
+  const start = process.hrtime();
+  const result = spawnSync(validation.cmd, validation.args, {
+    stdio: 'pipe',
+    encoding: 'utf8'
   });
-  
+  const elapsed = process.hrtime(start);
+  const elapsedSec = (elapsed[0] + elapsed[1] / 1e9).toFixed(2);
+
   if (result.status === 0) {
-    results.push(`✅ ${validation.name}`);
+    spinner.succeed(`${validation.name} passed (${elapsedSec}s)`);
+    summaryTable.push([
+      chalk.green('✔'),
+      chalk.bold(validation.name),
+      chalk.gray(`${elapsedSec}s`)
+    ]);
   } else {
-    results.push(`❌ ${validation.name}`);
+    spinner.fail(`${validation.name} failed (${elapsedSec}s)`);
+    summaryTable.push([
+      chalk.red('✖'),
+      chalk.bold(validation.name),
+      chalk.gray(`${elapsedSec}s`)
+    ]);
     allPassed = false;
     if (result.stderr && !result.stderr.includes('npm audit')) {
       console.log(`\n${chalk.red('Error in ' + validation.name + ':')}`);
-      console.log(result.stderr);
+      console.log(chalk.redBright(result.stderr));
     }
   }
 }
 
+let totalElapsed = process.hrtime(totalStart);
+let totalElapsedSec = (totalElapsed[0] + totalElapsed[1] / 1e9).toFixed(2);
+
+function renderTable(rows) {
+  const colWidths = [2, 28, 8];
+  let output = chalk.bold.underline('Result') + '  ' +
+    chalk.bold.underline('Validation') + '           ' +
+    chalk.bold.underline('Time') + '\n';
+  for (const row of rows) {
+    output += row[0].padEnd(colWidths[0]) +
+      ' ' + row[1].padEnd(colWidths[1]) +
+      ' ' + row[2].padEnd(colWidths[2]) + '\n';
+  }
+  return output;
+}
+
+const summary = renderTable(summaryTable);
+
 if (allPassed) {
-  spinner.succeed('All validations passed!');
-  console.log(boxen(results.join('\n') + '\n\n🚀 Ready to commit!', {
-    padding: 1,
-    borderStyle: 'round',
-    borderColor: 'green',
-    margin: 1
-  }));
+  console.log(boxen(
+    summary + `\n${chalk.green('🚀 Ready to commit!')}\n${chalk.bold('Total time:')} ${chalk.cyan(totalElapsedSec + 's')}`,
+    {
+      padding: 1,
+      borderStyle: 'round',
+      borderColor: 'green',
+      margin: 1
+    }
+  ));
 } else {
-  spinner.fail('Some validations failed');
-  console.log(boxen(results.join('\n') + '\n\n❌ Fix issues before committing', {
-    padding: 1,
-    borderStyle: 'round',
-    borderColor: 'red',
-    margin: 1
-  }));
+  console.log(boxen(
+    summary + `\n${chalk.red('❌ Fix issues before committing')}\n${chalk.bold('Total time:')} ${chalk.yellow(totalElapsedSec + 's')}`,
+    {
+      padding: 1,
+      borderStyle: 'round',
+      borderColor: 'red',
+      margin: 1
+    }
+  ));
   process.exit(1);
 }
